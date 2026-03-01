@@ -1,0 +1,14 @@
+{
+  "name": "forme-dating",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "node apps/api/src/server.js",
+    "dev:web": "python3 -m http.server 4173 --directory apps/web",
+    "dev": "echo 'Run dev:api and dev:web in separate terminals'"
+  }
+}
