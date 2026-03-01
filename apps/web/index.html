@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ForMe.Dating — Feed MVP</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { font-family: Inter, Arial, sans-serif; margin: 0; background: #0d0d10; color: #fff; }
+      .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+      header { padding: 16px; font-weight: 700; position: sticky; top: 0; background: #0d0d10; border-bottom: 1px solid #222; }
+      .feed { padding: 12px; display: grid; gap: 12px; }
+      .card { background: #17171c; border: 1px solid #2a2a33; border-radius: 16px; padding: 14px; }
+      .meta { font-size: 14px; color: #b6b6c9; margin-bottom: 10px; }
+      .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+      button { border: 0; border-radius: 999px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+      .sub { background: #6b5cff; color: #fff; }
+      .unlock { background: #ff4d8d; color: #fff; }
+      .donate { background: #27ae60; color: #fff; }
+      .log { margin: 0; padding: 12px 16px 18px; font-size: 12px; color: #c3c3da; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>ForMe.Dating — MVP лента</header>
+      <main id="feed" class="feed"></main>
+      <pre id="log" class="log">Загрузка...</pre>
+    </div>
+
+    <script>
+      const api = 'http://localhost:3000';
+      const feed = document.getElementById('feed');
+      const log = document.getElementById('log');
+
+      function writeLog(message) {
+        log.textContent = message;
+      }
+
+      async function call(path, payload) {
+        const res = await fetch(api + path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload || {})
+        });
+        return res.json();
+      }
+
+      function renderCard(item) {
+        const card = document.createElement('section');
+        card.className = 'card';
+        card.innerHTML = `
+          <div><strong>@${item.creatorName}</strong></div>
+          <div class="meta">${item.caption} • ${item.mediaType} • ${item.visibility}</div>
+          <div class="actions">
+            <button class="sub">Подписаться</button>
+            <button class="unlock">Открыть PPV</button>
+            <button class="donate">Донат</button>
+          </div>
+        `;
+
+        card.querySelector('.sub').onclick = async () => {
+          const data = await call('/api/v1/subscriptions', { creatorId: item.creatorId, planId: 'monthly' });
+          writeLog('Подписка: ' + JSON.stringify(data, null, 2));
+        };
+
+        card.querySelector('.unlock').onclick = async () => {
+          const data = await call('/api/v1/unlocks', { postId: item.id });
+          writeLog('Unlock: ' + JSON.stringify(data, null, 2));
+        };
+
+        card.querySelector('.donate').onclick = async () => {
+          const data = await call('/api/v1/donations', { creatorId: item.creatorId, amount: 10, currency: 'USD' });
+          writeLog('Донат: ' + JSON.stringify(data, null, 2));
+        };
+
+        return card;
+      }
+
+      async function init() {
+        const auth = await call('/api/v1/auth/telegram', { telegramId: 'tg-demo', username: 'demo' });
+        writeLog('Авторизация: ' + JSON.stringify(auth, null, 2));
+
+        const response = await fetch(api + '/api/v1/feed');
+        const data = await response.json();
+
+        feed.innerHTML = '';
+        data.items.forEach((item) => feed.appendChild(renderCard(item)));
+      }
+
+      init().catch((error) => writeLog('Ошибка: ' + error.message));
+    </script>
+  </body>
+</html>
